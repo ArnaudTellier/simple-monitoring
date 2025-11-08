@@ -19,8 +19,17 @@ jobs:
     
     - name: Docker Security Scan
       run: |
-        echo "🐳 Scanning Docker configurations..."
-        docker run --rm -v "$PWD:/src" goodwithtech/dockle:v0.4.11 /src/backend/Dockerfile || echo "⚠️  Docker security issues"
+        echo "🐳 Building and scanning Docker images..."
+        docker compose build
+        
+        # Puis scanner les images construites
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          goodwithtech/dockle:v0.4.11 \
+          simple-monitoring-backend || echo "⚠️  Backend security issues"
+        
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          goodwithtech/dockle:v0.4.11 \
+          simple-monitoring-frontend || echo "⚠️  Frontend security issues"
     
     - name: Secret Detection
       uses: gitleaks/gitleaks-action@v2
