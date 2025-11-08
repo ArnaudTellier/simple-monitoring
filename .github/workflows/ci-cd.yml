@@ -1,0 +1,57 @@
+name: CI/CD
+
+on: [push, pull_request]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: logs_db_test
+          POSTGRES_USER: logs_user
+          POSTGRES_PASSWORD: logs_password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        pip install pytest
+    
+    - name: Wait for DB
+      run: sleep 10
+    
+    - name: Run tests
+      run: |
+        cd backend
+        python -m pytest tests/ -v
+      env:
+        DB_HOST: localhost
+        DB_NAME: logs_db_test
+        DB_USER: logs_user
+        DB_PASSWORD: logs_password
+
+  build-docker:
+    needs: backend-tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: docker-compose build
+    - run: docker-compose up -d
+    - run: sleep 15 && docker-compose ps
+    - run: docker-compose down
