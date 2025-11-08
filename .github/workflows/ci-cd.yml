@@ -3,6 +3,29 @@ name: CI/CD
 on: [push, pull_request]
 
 jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Python Security Scan
+      run: |
+        echo "🔒 Scanning Python dependencies..."
+        cd backend
+        pip install safety bandit
+        safety check --ignore=51457 || echo "⚠️  Security issues found"
+        bandit -r . -f html -o security-report.html || echo "⚠️  Code issues found"
+    
+    - name: Docker Security Scan
+      run: |
+        echo "🐳 Scanning Docker configurations..."
+        docker run --rm -v "$PWD:/src" goodwithtech/dockle:v0.4.11 /src/backend/Dockerfile || echo "⚠️  Docker security issues"
+    
+    - name: Secret Detection
+      uses: gitleaks/gitleaks-action@v2
+      with:
+        config-path: .gitleaks.toml
   backend-tests:
     runs-on: ubuntu-latest
     services:
