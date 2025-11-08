@@ -17,20 +17,17 @@ jobs:
         safety check --ignore=51457 || echo "⚠️  Security issues found"
         bandit -r . -f html -o security-report.html || echo "⚠️  Code issues found"
     
-    - name: Docker Security Scan
+    - name: Docker Security Scan with Trivy
       run: |
-        echo "🐳 Building and scanning Docker images..."
+        echo "🐳 Installing Trivy..."
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        
+        echo "🔍 Building and scanning images..."
         docker compose build
         
-        # Puis scanner les images construites
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-          goodwithtech/dockle:v0.4.11 \
-          simple-monitoring-backend || echo "⚠️  Backend security issues"
-        
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-          goodwithtech/dockle:v0.4.11 \
-          simple-monitoring-frontend || echo "⚠️  Frontend security issues"
-    
+        trivy image --exit-code 0 --severity HIGH,CRITICAL simple-monitoring-backend:latest
+        trivy image --exit-code 0 --severity HIGH,CRITICAL simple-monitoring-frontend:latest
+
     - name: Secret Detection
       uses: gitleaks/gitleaks-action@v2
       with:
